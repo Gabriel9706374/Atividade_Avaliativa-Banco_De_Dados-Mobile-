@@ -1,118 +1,54 @@
-import { useFocusEffect, useRouter } from "expo-router";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
-import { useCallback, useState } from "react";
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { db } from "../../firebaseConfig";
-
-type Filme = {
-  id: string;
-  nome: string;
-  ano: string;
-  idade: string;
-  genero: string;
-  diretor: string;
-};
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function Index() {
   const router = useRouter();
-  const [filmes, setFilmes] = useState<Filme[]>([]);
+  const [nick, setNick] = useState("");
 
-  async function consultarFilmes() {
-    try {
-      const consulta = await getDocs(collection(db, "filmes"));
-      const lista: Filme[] = consulta.docs.map((documento) => ({
-        id: documento.id,
-        nome: documento.data().nome,
-        ano: documento.data().ano,
-        idade: documento.data().idade,
-        genero: documento.data().genero,
-        diretor: documento.data().diretor,
-      }));
-      setFilmes(lista);
-    } catch (erro) {
-      Alert.alert("Erro", "Não foi possível consultar os filmes. " + String(erro));
+  function iniciarJogo() {
+    const nome = nick.trim();
+    if (!nome) {
+      Alert.alert("Atenção", "Informe seu nickname para começar.");
+      return;
     }
-  }
-
-  useFocusEffect(
-    useCallback(() => {
-      consultarFilmes();
-    }, [])
-  );
-
-  async function excluirFilme(id: string) {
-    try {
-      await deleteDoc(doc(db, "filmes", id));
-      setFilmes(filmes.filter((filme) => filme.id !== id));
-      Alert.alert("Sucesso", "Filme excluído.");
-    } catch (erro) {
-      Alert.alert("Erro", "Não foi possível excluir o filme. " + String(erro));
-    }
-  }
-
-  function confirmarExclusao(id: string, nome: string) {
-    Alert.alert("Excluir filme", 'Deseja excluir "' + nome + '"?', [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Excluir", style: "destructive", onPress: () => excluirFilme(id) },
-    ]);
-  }
-
-  function Cabecalho() {
-    return (
-      <View style={styles.cabecalho}>
-        <Text style={styles.titulo}>Catálogo de filmes</Text>
-        <Pressable style={styles.botao} onPress={() => router.push("/cadastrar")}>
-          <Text style={styles.textoBotao}>Cadastrar filme</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  function Rodape() {
-    return <Text style={styles.rodape}>Fim do catálogo</Text>;
-  }
-
-  function Separador() {
-    return <View style={styles.separador} />;
+    router.push({ pathname: "/jogo", params: { nick: nome } });
   }
 
   return (
-    <FlatList
-      style={styles.lista}
-      contentContainerStyle={styles.conteudo}
-      data={filmes}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <View style={styles.filme}>
-          <Text style={styles.nome}>{item.nome}</Text>
-          <Text>Ano de lançamento: {item.ano}</Text>
-          <Text>Idade indicativa: {item.idade}</Text>
-          <Text>Gênero: {item.genero}</Text>
-          <Text>Diretor: {item.diretor}</Text>
-          <Pressable style={styles.botaoExcluir} onPress={() => confirmarExclusao(item.id, item.nome)}>
-            <Text style={styles.textoBotao}>Excluir filme</Text>
-          </Pressable>
-        </View>
-      )}
-      ListHeaderComponent={Cabecalho}
-      ListFooterComponent={Rodape}
-      ItemSeparatorComponent={Separador}
-      ListEmptyComponent={<Text style={styles.vazio}>Nenhum filme cadastrado.</Text>}
-    />
+    <View style={styles.tela}>
+      <Text style={styles.titulo}>Adivinhação de Números</Text>
+      <Text style={styles.instrucao}>
+        Descubra o número sorteado entre 1 e 100. A cada palpite, você receberá uma dica.
+      </Text>
+      <Text style={styles.label}>Nickname do jogador:</Text>
+      <TextInput
+        style={styles.input}
+        value={nick}
+        onChangeText={setNick}
+        placeholder="Digite seu nickname"
+        maxLength={24}
+        autoCapitalize="none"
+        returnKeyType="go"
+        onSubmitEditing={iniciarJogo}
+      />
+      <Pressable onPress={iniciarJogo} style={styles.botao}>
+        <Text style={styles.textoBotao}>Começar a jogar</Text>
+      </Pressable>
+      <Pressable onPress={() => router.push("/rank")} style={[styles.botao, styles.botaoSecundario]}>
+        <Text style={styles.textoBotao}>Ver ranking</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  lista: { flex: 1 },
-  conteudo: { padding: 16 },
-  cabecalho: { alignItems: "center", marginBottom: 16 },
-  titulo: { fontSize: 24, fontWeight: "bold", marginBottom: 12 },
-  filme: { padding: 12, backgroundColor: "#f1f1f1", borderRadius: 8, gap: 4 },
-  nome: { fontSize: 18, fontWeight: "bold" },
-  botao: { backgroundColor: "#2563eb", padding: 12, borderRadius: 6, alignItems: "center" },
-  botaoExcluir: { backgroundColor: "#b91c1c", padding: 10, borderRadius: 6, alignItems: "center", marginTop: 8 },
-  textoBotao: { color: "#ffffff", fontWeight: "bold" },
-  separador: { height: 12 },
-  rodape: { textAlign: "center", padding: 20, color: "#555" },
-  vazio: { textAlign: "center", padding: 20 },
+  tela: { flex: 1, justifyContent: "center", padding: 24, gap: 12, backgroundColor: "#f8fafc" },
+  titulo: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8, color: "#1e293b" },
+  instrucao: { fontSize: 16, textAlign: "center", color: "#475569", marginBottom: 18, lineHeight: 23 },
+  label: { fontSize: 16, fontWeight: "600", color: "#334155" },
+  input: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, padding: 14, backgroundColor: "#fff", fontSize: 16 },
+  botao: { backgroundColor: "#2563eb", padding: 14, borderRadius: 10, alignItems: "center", marginTop: 6 },
+  botaoSecundario: { backgroundColor: "#475569" },
+  textoBotao: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
